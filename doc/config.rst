@@ -104,6 +104,6 @@ Vaisala WXT536
 
 WXT-specific options include:
 
-- RTK_elevation_NAVD88: RTK elevation of the sensor referenced to NAVD88 in meters.
-- dir_offset: a direction offset in degrees from magnetic north to be applied if the sensor was not pointing toward magnetic north.
-- dir_offset_note: a note about the direction offset being used.
+- ``RTK_elevation_NAVD88``: RTK elevation of the sensor referenced to NAVD88 in meters.
+- ``dir_offset``: a direction offset in degrees from magnetic north to be applied if the sensor was not pointing toward magnetic north.
+- ``dir_offset_note``: a note about the direction offset being used.
