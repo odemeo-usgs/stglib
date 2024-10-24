@@ -75,7 +75,7 @@ def read_81R(fname):
     variables["Pitch"] = [0] * npings
     variables["Roll"] = [0] * npings
     variables["time"] = [0] * npings
-    variables["StartGain"] = [0] * npings
+    # variables['StartGain'] = [0]*npings
     variables["NReturnBytes"] = [0] * npings
 
     # Extract data from each ping
@@ -111,7 +111,7 @@ def read_81R(fname):
             variables["Pitch"][i] = ReturnHeader["Pitch"]
             variables["Roll"][i] = ReturnHeader["Roll"]
             variables["time"][i] = time
-            variables["StartGain"][i] = SwitchCommand["StartGain"]
+            # variables['StartGain'][i] = SwitchCommand['StartGain']
             if "NReturnBytes" in ReturnHeader:
                 variables["NReturnBytes"][i] = ReturnHeader["NReturnBytes"]
             else:
@@ -122,8 +122,7 @@ def read_81R(fname):
     offset = (
         N81RFILEHEADERBYTES + NDEVICELISTBYTES + switchCommandBytes + returnHeaderBytes
     )
-    variables["ImageData"] = imagedata[:, offset:-1]
-    variables["Raw"] = imagedata
+    image = imagedata[:, offset:-1]
 
     # Convert to xarray
     del variables["HeadID"]
@@ -133,16 +132,24 @@ def read_81R(fname):
 
     df = pd.DataFrame.from_dict(variables)
     df.index.names = ["time"]
-    ds = xr.Dataset.from_dataframe(df)
+    ds = df.to_xarray()
 
-    return ds, variables, header
+    # Make xarray with echo data
+    ds["sample"] = range(0, image.shape[1])
+    echo_data = xr.DataArray(image, dims=["time", "sample"], name="imagedata")
+    ds = xr.merge([ds, echo_data])
+
+    return ds, header
 
 
 # Make raw CDF
 def file81R_to_cdf(metadata):
     basefile = metadata["basefile"]
 
-    FanData, FanHeader, FanSwitches = read_81R(basefile + ".81R")
+    ds, header = read_81R(basefile + ".81R")
+
+    # Append header to metadata variable
+    metadata.update(header)
 
     ds = utils.write_metadata(ds, metadata)
 
@@ -151,7 +158,7 @@ def file81R_to_cdf(metadata):
     # configure file
     cdf_filename = ds.attrs["filename"] + "-raw.cdf"
 
-    ds.to_netcdf(cdf_filename, unlimited_dims=["time"])
+    ds.to_netcdf("cdf_filename", unlimited_dims=["time"])
 
     print("Finished writing data to %s" % cdf_filename)
 
