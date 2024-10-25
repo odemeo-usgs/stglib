@@ -29,7 +29,7 @@ def read_81R(fname):
     NDEVICELISTBYTES = 1024
 
     # Parse the start of the file
-    header = sonutils.parse_pingHeader(data[:N81RFILEHEADERBYTES], fname[-12:-8])[1]
+    time, header = sonutils.parse_pingHeader(data[:N81RFILEHEADERBYTES], fname[-12:-8])
 
     # Gather the size of the switch commands and the return data header
     switchCommandBytes = header["SwitchCommandBytes"]
@@ -47,11 +47,7 @@ def read_81R(fname):
 
     # Add switch settings and filename to header info
     header.update(SwitchSettings)
-    header["FileName"] = fname
-
-    # #Extract information from the first return data header
-    # offset += switchCommandBytes
-    # ReturnHeader = sonutils.parseFanHeader(data[offset:offset+returnHeaderBytes], header)
+    # header["FileName"] = fname
 
     # Calculate the number of pings using the file size and the size of each ping
     npings = int(os.path.getsize(fname) / header["TotalBytes"])
@@ -74,8 +70,6 @@ def read_81R(fname):
     variables["Heading"] = [0] * npings
     variables["Pitch"] = [0] * npings
     variables["Roll"] = [0] * npings
-    variables["time"] = [0] * npings
-    # variables['StartGain'] = [0]*npings
     variables["NReturnBytes"] = [0] * npings
 
     # Extract data from each ping
@@ -110,7 +104,7 @@ def read_81R(fname):
             variables["Heading"][i] = ReturnHeader["Heading"]
             variables["Pitch"][i] = ReturnHeader["Pitch"]
             variables["Roll"][i] = ReturnHeader["Roll"]
-            variables["time"][i] = time
+            # variables["time"] = time
             # variables['StartGain'][i] = SwitchCommand['StartGain']
             if "NReturnBytes" in ReturnHeader:
                 variables["NReturnBytes"][i] = ReturnHeader["NReturnBytes"]
@@ -131,25 +125,52 @@ def read_81R(fname):
     del variables["NReturnBytes"]
 
     df = pd.DataFrame.from_dict(variables)
-    df.index.names = ["time"]
+    df.index.names = ["scan"]
     ds = df.to_xarray()
 
-    # Make xarray with echo data
-    ds["sample"] = range(0, image.shape[1])
-    echo_data = xr.DataArray(image, dims=["time", "sample"], name="imagedata")
+    # # Make xarray with time and echo data
+    # ds["time"]=time
+    ds["points"] = range(0, image.shape[1])
+    echo_data = xr.DataArray(image, dims=["scan", "points"], name="imagedata")
     ds = xr.merge([ds, echo_data])
+    # ds.expand_dims({'time':1})
 
-    return ds, header
+    return ds, header, time
 
 
 # Make raw CDF
 def file81R_to_cdf(metadata):
-    basefile = metadata["basefile"]
 
-    ds, header = read_81R(basefile + ".81R")
+    folder = metadata["folder"]
+
+    # List all files in the current directory
+    files = os.listdir(folder)
+    names = [file[:-6] for file in files]
+
+    # Find unique names for sets of sweeps
+    unique_list = list(set(names))
+    unique_list.sort()
+
+    # For each sequence (5m or 20m)
+    for uniq in unique_list:
+
+        # Find sets of sweeps
+        sweep_list = [s for s in files if unique_list[uniq] in s]
+
+        # Read each sweep in set
+        for j in range(0, len(sweep_list)):
+            if j == 0:
+                ds, header, time = read_81R(folder + sweep_list[j])
+            else:
+                ds_new = read_81R(folder + sweep_list[j])[0]
+                ds = xr.concat([ds, ds_new], dim="sweep")
+
+        # Add time of first sweep as dimension
+        ds["time"] = time
+        ds.expand_dims({"time": 1})
 
     # Append header to metadata variable
-    metadata.update(header)
+    # metadata.update(header)
 
     ds = utils.write_metadata(ds, metadata)
 

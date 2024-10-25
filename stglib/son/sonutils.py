@@ -53,12 +53,6 @@ def parse_pingHeader(fheader, timeprefix):
     pingheader["Mode"] = temp[fheader[324]]
     pingheader["RangeOffset"] = floor(struct.unpack("<f", fheader[325:329])[0])
 
-    # pingheader['StepSize'] = floor(struct.unpack('<f', fheader[365:369])[0]*10)/10
-    # pingheader['StartGain'] = fheader[320]
-    # pingheader['SectorSize'] = floor(struct.unpack('<f', fheader[357:361])[0])
-    # pingheader['TrainAngle'] = floor(struct.unpack('<f', fheader[361:365])[0])
-    # pingheader['Absorption'] = floor(struct.unpack('<f', fheader[329:333])[0]*10)/10
-
     # Get time
     dstr = timeprefix + bin2ascii(fheader[14:27])
     fmt = "%m%d%Y%H%M%S.%f"
@@ -79,10 +73,6 @@ def parse_switchCommand(scommand):
 
     # Extract relevant data using the manual as a guide
     SwitchCommand["Range"] = scommand[3]
-
-    # When converting a byte to binary in python, it doesn't automatically fill in the 8 bits
-    # SwitchCommand['Pause'] = bin(scommand[5])[2:].zfill(8)[0]
-    # SwitchCommand['Reverse'] = bin(scommand[5])[2:].zfill(8)[6]
 
     # All conversions are found in the manual
     SwitchCommand["StartGain"] = scommand[8]
