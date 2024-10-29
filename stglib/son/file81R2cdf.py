@@ -25,11 +25,11 @@ def read_81R(fname):
     data = fid.read()
 
     # Universal lengths of the file header and the device list
-    N81RFILEHEADERBYTES = 1024
-    NDEVICELISTBYTES = 1024
+    PINGHEADERBYTES = 1024
+    DEVICELISTBYTES = 1024
 
     # Parse the start of the file
-    time, header = sonutils.parse_pingHeader(data[:N81RFILEHEADERBYTES], fname[-12:-8])
+    time, header = sonutils.parse_pingHeader(data[:PINGHEADERBYTES], fname[-12:-8])
 
     # Gather the size of the switch commands and the return data header
     switchCommandBytes = header["SwitchCommandBytes"]
@@ -38,16 +38,16 @@ def read_81R(fname):
     # Drop unneeded variables
     del header["SwitchCommandBytes"]
     del header["ReturnHeaderBytes"]
+    del header["ReturnDataHeaderType"]
 
     # Extract information from the first set of switch commands
-    offset = N81RFILEHEADERBYTES + NDEVICELISTBYTES
+    offset = PINGHEADERBYTES + DEVICELISTBYTES
     SwitchSettings = sonutils.parse_switchCommand(
         data[offset : offset + switchCommandBytes]
     )
 
-    # Add switch settings and filename to header info
+    # Add switch settings to header info
     header.update(SwitchSettings)
-    # header["FileName"] = fname
 
     # Calculate the number of pings using the file size and the size of each ping
     npings = int(os.path.getsize(fname) / header["TotalBytes"])
@@ -64,23 +64,26 @@ def read_81R(fname):
     variables["HeadPosition"] = [0] * npings
     variables["HeadAngle"] = [0] * npings
     variables["StepDirection"] = [0] * npings
-    variables["Range"] = [0] * npings
+    # variables["Range"] = [0] * npings
     variables["ProfileRange"] = [0] * npings
     variables["NDataBytes"] = [0] * npings
-    variables["Heading"] = [0] * npings
+    variables["SonarPosition"] = [0] * npings
+    variables["SonarAngle"] = [0] * npings
     variables["Pitch"] = [0] * npings
     variables["Roll"] = [0] * npings
+    variables["Heading"] = [0] * npings
     variables["NReturnBytes"] = [0] * npings
+    variables["GyroHeading"] = [0] * npings
 
     # Extract data from each ping
     for i in range(npings):
         # Gather data from the universal header
         time, PingHeader = sonutils.parse_pingHeader(
-            imagedata[i, :N81RFILEHEADERBYTES].tobytes(), fname[-12:-8]
+            imagedata[i, :PINGHEADERBYTES].tobytes(), fname[-12:-8]
         )
 
         # Gather data from the switch commands
-        offset = N81RFILEHEADERBYTES + NDEVICELISTBYTES
+        offset = PINGHEADERBYTES + DEVICELISTBYTES
         SwitchCommand = sonutils.parse_switchCommand(
             imagedata[i, offset : offset + switchCommandBytes].tobytes()
         )
@@ -98,12 +101,15 @@ def read_81R(fname):
             variables["HeadPosition"][i] = ReturnHeader["HeadPosition"]
             variables["HeadAngle"][i] = ReturnHeader["HeadAngle"]
             variables["StepDirection"][i] = ReturnHeader["StepDirection"]
-            variables["Range"][i] = ReturnHeader["Range"]
+            # variables["Range"][i] = ReturnHeader["Range"]
             variables["ProfileRange"][i] = ReturnHeader["ProfileRange"]
             variables["NDataBytes"][i] = ReturnHeader["NDataBytes"]
-            variables["Heading"][i] = ReturnHeader["Heading"]
+            variables["SonarPosition"][i] = ReturnHeader["SonarPosition"]
+            variables["SonarAngle"][i] = ReturnHeader["SonarAngle"]
             variables["Pitch"][i] = ReturnHeader["Pitch"]
             variables["Roll"][i] = ReturnHeader["Roll"]
+            variables["Heading"][i] = ReturnHeader["Heading"]
+            variables["GyroHeading"][i] = ReturnHeader["GyroHeading"]
             # variables["time"] = time
             # variables['StartGain'][i] = SwitchCommand['StartGain']
             if "NReturnBytes" in ReturnHeader:
@@ -113,13 +119,11 @@ def read_81R(fname):
                 print(f"Problem at ping {i}")
 
     # Isolate the section of the numpy array that corresponds to the return data
-    offset = (
-        N81RFILEHEADERBYTES + NDEVICELISTBYTES + switchCommandBytes + returnHeaderBytes
-    )
+    offset = PINGHEADERBYTES + DEVICELISTBYTES + switchCommandBytes + returnHeaderBytes
     image = imagedata[:, offset:-1]
 
     # Convert to xarray
-    del variables["HeadID"]
+    header.update({"ReturnDataHeaderType": variables["ReturnDataHeaderType"][0]})
     del variables["ReturnDataHeaderType"]
     del variables["NDataBytes"]
     del variables["NReturnBytes"]
@@ -152,7 +156,7 @@ def file81R_to_cdf(metadata):
     unique_list.sort()
 
     # For each sequence (5m or 20m)
-    for uniq in unique_list:
+    for uniq in unique_list:  # k in range(0, len(unique_list)):
 
         # Find sets of sweeps
         sweep_list = [s for s in files if unique_list[uniq] in s]
@@ -165,9 +169,16 @@ def file81R_to_cdf(metadata):
                 ds_new = read_81R(folder + sweep_list[j])[0]
                 ds = xr.concat([ds, ds_new], dim="sweep")
 
+        # Sort header alphabetically and add to global attributes
+        header = sorted(header.items())
+        ds.attrs = header
+
         # Add time of first sweep as dimension
         ds["time"] = time
         ds.expand_dims({"time": 1})
+
+        # Reorder dimensions
+        ds.transpose("sweep", "time", "points", "scan")
 
     # Append header to metadata variable
     # metadata.update(header)
@@ -179,7 +190,7 @@ def file81R_to_cdf(metadata):
     # configure file
     cdf_filename = ds.attrs["filename"] + "-raw.cdf"
 
-    ds.to_netcdf("cdf_filename", unlimited_dims=["time"])
+    ds.to_netcdf("sonar_4sweeps.cdf", unlimited_dims=["time"])
 
     print("Finished writing data to %s" % cdf_filename)
 
