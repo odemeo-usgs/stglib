@@ -61,7 +61,7 @@ def read_81R(fname):
 
     # Initialize variables to make the loop more efficient
     variables["ReturnDataHeaderType"] = [""] * npings
-    variables["HeadID"] = [""] * npings
+    # variables["HeadID"] = [""] * npings
     variables["HeadPosition"] = [nan] * npings
     variables["HeadAngle"] = [nan] * npings
     variables["StepDirection"] = [nan] * npings
@@ -134,11 +134,9 @@ def read_81R(fname):
     ds = df.to_xarray()
 
     # # Make xarray with time and echo data
-    # ds["time"]=time
     ds["points"] = range(0, image.shape[1])
     echo_data = xr.DataArray(image, dims=["scan", "points"], name="imagedata")
     ds = xr.merge([ds, echo_data])
-    # ds.expand_dims({'time':1})
 
     return ds, header, time
 
@@ -156,8 +154,9 @@ def file81R_to_cdf(metadata):
     unique_list = list(set(names))
     unique_list.sort()
 
+    time = []
     # For each sequence (5m or 20m)
-    for k in range(0, len(unique_list)):
+    for k in range(0, 11):  # range(0, len(unique_list)):
 
         # Find sets of sweeps
         sweep_list = [s for s in files if unique_list[k] in s]
@@ -165,24 +164,28 @@ def file81R_to_cdf(metadata):
         # Read each sweep in set
         for j in range(0, len(sweep_list)):
             if j == 0:
-                ds, header, time = read_81R(folder + sweep_list[j])
+                ds_4sweeps, header, first_time = read_81R(folder + sweep_list[j])
             else:
                 ds_new = read_81R(folder + sweep_list[j])[0]
-                ds = xr.concat([ds, ds_new], dim="sweep")
+                ds_4sweeps = xr.concat([ds_4sweeps, ds_new], dim="sweep")
+        time.append(first_time)
 
-        # Sort header alphabetically and add to global attributes
-        header = sorted(header.items())
-        ds.attrs = header
+        # Read each set of 4 sweeps
+        if k == 0:
+            ds = ds_4sweeps
+        else:
+            ds = xr.concat([ds, ds_4sweeps], dim="time")
 
-        # Add time of first sweep as dimension
-        ds["time"] = time
-        ds.expand_dims({"time": 1})
+    # Add coordinates for sweep and time
+    ds = ds.assign_coords(sweep=("sweep", range(0, 4)))
+    ds = ds.assign_coords(time=("time", time))
 
-        # Reorder dimensions
-        ds.transpose("sweep", "time", "points", "scan")
+    # Sort header alphabetically and add to global attributes
+    header = sorted(header.items())
+    ds.attrs = header
 
-    # Append header to metadata variable
-    # metadata.update(header)
+    # Reorder dimensions
+    ds = ds.transpose("sweep", "time", "points", "scan")
 
     ds = utils.write_metadata(ds, metadata)
 
