@@ -1,4 +1,5 @@
 import os
+from math import nan
 
 import numpy as np
 import pandas as pd
@@ -61,19 +62,19 @@ def read_81R(fname):
     # Initialize variables to make the loop more efficient
     variables["ReturnDataHeaderType"] = [""] * npings
     variables["HeadID"] = [""] * npings
-    variables["HeadPosition"] = [0] * npings
-    variables["HeadAngle"] = [0] * npings
-    variables["StepDirection"] = [0] * npings
+    variables["HeadPosition"] = [nan] * npings
+    variables["HeadAngle"] = [nan] * npings
+    variables["StepDirection"] = [nan] * npings
     # variables["Range"] = [0] * npings
-    variables["ProfileRange"] = [0] * npings
-    variables["NDataBytes"] = [0] * npings
-    variables["SonarPosition"] = [0] * npings
-    variables["SonarAngle"] = [0] * npings
-    variables["Pitch"] = [0] * npings
-    variables["Roll"] = [0] * npings
-    variables["Heading"] = [0] * npings
-    variables["NReturnBytes"] = [0] * npings
-    variables["GyroHeading"] = [0] * npings
+    variables["ProfileRange"] = [nan] * npings
+    variables["NDataBytes"] = [nan] * npings
+    variables["SonarPosition"] = [nan] * npings
+    variables["SonarAngle"] = [nan] * npings
+    variables["Pitch"] = [nan] * npings
+    variables["Roll"] = [nan] * npings
+    variables["Heading"] = [nan] * npings
+    variables["NReturnBytes"] = [nan] * npings
+    variables["GyroHeading"] = [nan] * npings
 
     # Extract data from each ping
     for i in range(npings):
@@ -97,7 +98,7 @@ def read_81R(fname):
         # If the header isn't empty, transfer the gathered data into the output dictionary
         if ReturnHeader:
             variables["ReturnDataHeaderType"][i] = ReturnHeader["ReturnDataHeaderType"]
-            variables["HeadID"][i] = ReturnHeader["HeadID"]
+            # variables["HeadID"][i] = ReturnHeader["HeadID"]
             variables["HeadPosition"][i] = ReturnHeader["HeadPosition"]
             variables["HeadAngle"][i] = ReturnHeader["HeadAngle"]
             variables["StepDirection"][i] = ReturnHeader["StepDirection"]
@@ -156,10 +157,10 @@ def file81R_to_cdf(metadata):
     unique_list.sort()
 
     # For each sequence (5m or 20m)
-    for uniq in unique_list:  # k in range(0, len(unique_list)):
+    for k in range(0, len(unique_list)):
 
         # Find sets of sweeps
-        sweep_list = [s for s in files if unique_list[uniq] in s]
+        sweep_list = [s for s in files if unique_list[k] in s]
 
         # Read each sweep in set
         for j in range(0, len(sweep_list)):
