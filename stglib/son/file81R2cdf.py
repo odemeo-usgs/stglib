@@ -154,9 +154,9 @@ def file81R_to_cdf(metadata):
     unique_list = list(set(names))
     unique_list.sort()
 
-    time = []
+    date = []
     # For each sequence (5m or 20m)
-    for k in range(0, 11):  # range(0, len(unique_list)):
+    for k in range(0, len(unique_list)):
 
         # Find sets of sweeps
         sweep_list = [s for s in files if unique_list[k] in s]
@@ -168,7 +168,7 @@ def file81R_to_cdf(metadata):
             else:
                 ds_new = read_81R(folder + sweep_list[j])[0]
                 ds_4sweeps = xr.concat([ds_4sweeps, ds_new], dim="sweep")
-        time.append(first_time)
+        date.append(first_time)
 
         # Read each set of 4 sweeps
         if k == 0:
@@ -178,7 +178,7 @@ def file81R_to_cdf(metadata):
 
     # Add coordinates for sweep and time
     ds = ds.assign_coords(sweep=("sweep", range(0, 4)))
-    ds = ds.assign_coords(time=("time", time))
+    ds = ds.assign_coords(time=("time", date))
 
     # Sort header alphabetically and add to global attributes
     header = sorted(header.items())
