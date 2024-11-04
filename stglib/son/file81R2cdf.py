@@ -194,7 +194,7 @@ def file81R_to_cdf(metadata):
     # configure file
     cdf_filename = ds.attrs["filename"] + "-raw.cdf"
 
-    ds.to_netcdf("sonar_4sweeps.cdf", unlimited_dims=["time"])
+    ds.to_netcdf(cdf_filename, unlimited_dims=["time"])
 
     print("Finished writing data to %s" % cdf_filename)
 
