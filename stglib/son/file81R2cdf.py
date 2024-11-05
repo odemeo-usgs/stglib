@@ -192,7 +192,7 @@ def file81R_to_cdf(metadata):
     ds = utils.ensure_cf(ds)
 
     # configure file
-    cdf_filename = ds.attrs["filename"] + "-raw.cdf"
+    # cdf_filename = ds.attrs["filename"] + "-raw.cdf"
 
     ds.to_netcdf(cdf_filename, unlimited_dims=["time"])
 
