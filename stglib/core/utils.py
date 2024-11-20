@@ -1432,12 +1432,12 @@ def create_water_level_var(ds):
     return ds
 
 
-def create_stormtide_water_level_var(ds):
+def create_filtered_water_level_var(ds):
     """
-    Create 6 min cutoff stormtide filtered water level variable from NAVD88 sensor height
+    Create 4th order lowpass butterworth filtered water level with 6 min cutoff
     """
 
-    if ds.attrs["stormtide"] == "ON":
+    if ds.attrs["filtered_wl"] == "ON":
 
         var = "water_level"
         cutfreq = 1 / 360  # 6 min cutoff
@@ -1453,9 +1453,18 @@ def create_stormtide_water_level_var(ds):
                 "Cannot create stormtide_water_level without sample_rate or sample _interval in global attributes"
             )
 
-        stormtide = filter.butter_filt(ds[var], sr, cutfreq, ftype, ford)
+        filtered_wl = filter.butter_filt(ds[var], sr, cutfreq, ftype, ford)
 
-        ds["filtered_water_level"] = xr.DataArray(stormtide, dims="time")
-        ## Add attrs
+        ds["water_level_filt"] = xr.DataArray(filtered_wl, dims="time")
+
+        ds["water_level_filt"].attrs["long_name"] = "Filtered water level NAVD88"
+        ds["water_level_filt"].attrs["units"] = "m"
+        ds["water_level_filt"].attrs[
+            "standard_name"
+        ] = "sea_surface_height_above_geopotential_datum"
+        ds["water_level_filt"].attrs["geopotential_datum_name"] = "NAVD88"
+        ds["water_level_filt"].attrs[
+            "note"
+        ] = "4th order lowpass butterworth filter with 6 min cutoff"
 
     return ds
