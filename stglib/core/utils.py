@@ -1428,3 +1428,36 @@ def create_water_level_var(ds):
             "Cannot create water_level variable without P_1ac and height_above_geopotential_datum relative to NAVD88 in global attributes file."
         )
     return ds
+
+
+def create_stormtide_water_level_var(ds):
+    """
+    Create 6 min cutoff stormtide filtered water level variable from NAVD88 sensor height
+    """
+
+    if ds.attrs["stormtide"] == "ON":
+
+        if "P_1ac" not in list(ds.data_vars):
+            raise ValueError(
+                "Cannot create stormtide_water_level variable without P_1ac"
+            )
+        elif ds.z.attrs["geopotential_datum_name"] == "NAVD88":
+
+            if "sample" in ds.dims:
+                ds["stormtide_water_level"] = xr.DataArray(
+                    ds["P_1ac"].squeeze().mean(dim="sample") + ds["z"].values
+                )
+            else:
+                ds["stormtide_water_level"] = ds["P_1ac"] + ds["z"].values
+
+            ds["stormtide_water_level"].attrs["long_name"] = "Water level NAVD88"
+            ds["stormtide_water_level"].attrs["units"] = "m"
+            ds["stormtide_water_level"].attrs[
+                "standard_name"
+            ] = "sea_surface_height_above_geopotential_datum"
+            ds["stormtide_water_level"].attrs["geopotential_datum_name"] = "NAVD88"
+        else:
+            raise ValueError(
+                "Cannot create stormtide_water_level variable without height_above_geopotential_datum relative to NAVD88 in global attributes file."
+            )
+    return ds
