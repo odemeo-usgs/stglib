@@ -1436,7 +1436,7 @@ def create_filtered_water_level_var(ds):
     Create 4th order lowpass butterworth filtered water level with 6 min cutoff
     """
 
-    if "filtered_wl" in list(ds.data_vars) and ds.attrs["filtered_wl"] == "ON":
+    if "filtered_wl" in list(ds.attrs) and ds.attrs["filtered_wl"] == "ON":
 
         var = "water_level"
         cutfreq = 1 / 360  # 6 min cutoff
@@ -1449,7 +1449,7 @@ def create_filtered_water_level_var(ds):
             sr = 1 / ds.attrs["sample_interval"]
         else:
             raise ValueError(
-                "Cannot create stormtide_water_level without sample_rate or sample _interval in global attributes"
+                "Cannot create filtered_water_level without sample_rate or sample _interval in global attributes"
             )
 
         filtered_wl = filter.butter_filt(ds[var].values, sr, cutfreq, ftype, ford)
