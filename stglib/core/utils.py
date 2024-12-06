@@ -15,6 +15,8 @@ import xarray as xr
 
 import stglib
 
+from .core import filter
+
 
 def is_cf(ds):
     if ("Conventions" in ds.attrs) and ("CF" in ds.attrs["Conventions"]):
@@ -1437,27 +1439,23 @@ def create_stormtide_water_level_var(ds):
 
     if ds.attrs["stormtide"] == "ON":
 
-        if "P_1ac" not in list(ds.data_vars):
-            raise ValueError(
-                "Cannot create stormtide_water_level variable without P_1ac"
-            )
-        elif ds.z.attrs["geopotential_datum_name"] == "NAVD88":
+        var = "water_level"
+        cutfreq = 1 / 360  # 6 min cutoff
+        ftype = "lowpass"
+        ford = 4
 
-            if "sample" in ds.dims:
-                ds["stormtide_water_level"] = xr.DataArray(
-                    ds["P_1ac"].squeeze().mean(dim="sample") + ds["z"].values
-                )
-            else:
-                ds["stormtide_water_level"] = ds["P_1ac"] + ds["z"].values
-
-            ds["stormtide_water_level"].attrs["long_name"] = "Water level NAVD88"
-            ds["stormtide_water_level"].attrs["units"] = "m"
-            ds["stormtide_water_level"].attrs[
-                "standard_name"
-            ] = "sea_surface_height_above_geopotential_datum"
-            ds["stormtide_water_level"].attrs["geopotential_datum_name"] = "NAVD88"
+        if "sample_rate" in ds.attrs:
+            sr = ds.attrs["sample_rate"]
+        elif "sample_interval" in ds.attrs:
+            sr = 1 / ds.attrs["sample_interval"]
         else:
             raise ValueError(
-                "Cannot create stormtide_water_level variable without height_above_geopotential_datum relative to NAVD88 in global attributes file."
+                "Cannot create stormtide_water_level without sample_rate or sample _interval in global attributes"
             )
+
+        stormtide = filter.butter_filt(ds[var], sr, cutfreq, ftype, ford)
+
+        ds["filtered_water_level"] = xr.DataArray(stormtide, dims="time")
+        ## Add attrs
+
     return ds
