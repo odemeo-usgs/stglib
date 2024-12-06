@@ -1453,7 +1453,7 @@ def create_filtered_water_level_var(ds):
                 "Cannot create stormtide_water_level without sample_rate or sample _interval in global attributes"
             )
 
-        filtered_wl = filter.butter_filt(ds[var], sr, cutfreq, ftype, ford)
+        filtered_wl = filter.butter_filt(ds[var].values, sr, cutfreq, ftype, ford)
 
         ds["water_level_filt"] = xr.DataArray(filtered_wl, dims="time")
 

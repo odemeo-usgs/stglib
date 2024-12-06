@@ -72,7 +72,7 @@ def cdf_to_nc(cdf_filename, atmpres=None, writefile=True, format="NETCDF4"):
         ds = utils.create_z(ds)
         ds = utils.create_water_level_var(ds)
         ds = utils.create_water_depth_var(ds)
-        ds = utils.create_stormtide_water_level_var(ds)
+        ds = utils.create_filtered_water_level_var(ds)
         ds = utils.add_min_max(ds)
         ds = utils.ds_add_lat_lon(ds)
 
