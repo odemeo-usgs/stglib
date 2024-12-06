@@ -15,7 +15,7 @@ import xarray as xr
 
 import stglib
 
-from .core import filter
+from . import filter
 
 
 def is_cf(ds):
@@ -1411,7 +1411,6 @@ def create_water_level_var(ds):
         "P_1ac" in list(ds.data_vars)
         and ds.z.attrs["geopotential_datum_name"] == "NAVD88"
     ):
-
         if "sample" in ds.dims:
             ds["water_level"] = xr.DataArray(
                 ds["P_1ac"].squeeze().mean(dim="sample") + ds["z"].values
@@ -1437,7 +1436,7 @@ def create_filtered_water_level_var(ds):
     Create 4th order lowpass butterworth filtered water level with 6 min cutoff
     """
 
-    if ds.attrs["filtered_wl"] == "ON":
+    if "filtered_wl" in list(ds.data_vars) and ds.attrs["filtered_wl"] == "ON":
 
         var = "water_level"
         cutfreq = 1 / 360  # 6 min cutoff

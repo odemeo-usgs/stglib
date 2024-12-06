@@ -472,7 +472,6 @@ def cdf_to_nc(cdf_filename, atmpres=False):
 
     ds = utils.create_z(ds)  # added 7/31/2023
     ds = utils.create_water_level_var(ds)
-    ds = utils.create_water_depth_var(ds)
     ds = utils.create_filtered_water_level_var(ds)
     ds = ds_add_attrs(ds)
     ds = utils.add_min_max(ds)
